@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ころころめいろ 🎪</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --sky: #fff9e6;
+    --wall: #ff6b6b;
+    --wall2: #ff8e53;
+    --ball: #ffe66d;
+    --ball-shadow: #f0a500;
+    --goal: #6bcb77;
+    --bg: #ffeaa7;
+    --star: #fdcb6e;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--sky);
+    font-family: 'Nunito', 'Rounded Mplus 1c', sans-serif;
+    touch-action: none;
+    user-select: none;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 10px;
+    padding: 10px;
+    background: radial-gradient(ellipse at 30% 20%, #fff9e6, #ffe0b2);
+  }
+
+  #title {
+    font-size: clamp(1.4rem, 5vw, 2.2rem);
+    font-weight: 900;
+    color: #ff6b6b;
+    text-shadow: 3px 3px 0 #ffb347, 5px 5px 0 rgba(0,0,0,0.08);
+    letter-spacing: 0.05em;
+    animation: bounce-title 2s ease-in-out infinite;
+  }
+
+  @keyframes bounce-title {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  #canvas-wrap {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 0 #f0b349, 0 12px 30px rgba(0,0,0,0.18);
+    border: 5px solid #ffb347;
+    background: #fffdf5;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  #ui-row {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .badge {
+    background: #fff;
+    border: 3px solid #ff6b6b;
+    border-radius: 50px;
+    padding: 5px 16px;
+    font-size: clamp(0.85rem, 3vw, 1.05rem);
+    font-weight: 900;
+    color: #ff6b6b;
+    box-shadow: 0 4px 0 #ffb347;
+  }
+
+  #btn-restart {
+    background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 26px;
+    font-size: clamp(1rem, 3.5vw, 1.2rem);
+    font-weight: 900;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #c0392b;
+    transition: transform 0.1s, box-shadow 0.1s;
+    letter-spacing: 0.04em;
+  }
+
+  #btn-restart:active { transform: translateY(3px); box-shadow: 0 2px 0 #c0392b; }
+
+  /* Overlay screens */
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.88);
+    border-radius: 18px;
+    gap: 16px;
+    text-align: center;
+    padding: 20px;
+    transition: opacity 0.4s;
+  }
+
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+
+  #overlay h2 {
+    font-size: clamp(1.8rem, 7vw, 3rem);
+    font-weight: 900;
+    color: #ff6b6b;
+    text-shadow: 3px 3px 0 #ffb347;
+    line-height: 1.2;
+  }
+
+  #overlay p {
+    font-size: clamp(0.95rem, 3.5vw, 1.2rem);
+    font-weight: 700;
+    color: #888;
+    line-height: 1.5;
+  }
+
+  .emoji-big {
+    font-size: clamp(3rem, 12vw, 5rem);
+    animation: pop 0.5s cubic-bezier(.36,1.5,.6,1) forwards;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  /* Stars flying */
+  .star {
+    position: fixed;
+    font-size: 2rem;
+    pointer-events: none;
+    animation: fly-star 1.4s ease-out forwards;
+  }
+
+  @keyframes fly-star {
+    0% { transform: translate(0,0) scale(0) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(360deg); opacity: 0; }
+  }
+
+  /* Tilt indicator (for non-gyro) */
+  #tilt-hint {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #ccc;
+    font-family: inherit;
+  }
+
+  /* Level indicator stars */
+  #stars-row {
+    display: flex;
+    gap: 4px;
+    font-size: 1.4rem;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="title">🎪 ころころめいろ 🎪</div>
+
+  <div id="canvas-wrap">
+    <canvas id="maze"></canvas>
+    <div id="overlay">
+      <div class="emoji-big" id="overlay-emoji">🎮</div>
+      <h2 id="overlay-title">はじめよう！</h2>
+      <p id="overlay-msg">スマホをかたむけて<br>ボールをゴールまでころがそう！</p>
+      <button id="btn-start" style="
+        background:linear-gradient(135deg,#6bcb77,#4ea852);
+        color:#fff;border:none;border-radius:50px;
+        padding:14px 36px;font-size:1.3rem;font-weight:900;
+        font-family:inherit;cursor:pointer;
+        box-shadow:0 5px 0 #2d7a35;letter-spacing:0.05em;">
+        スタート！
+      </button>
+    </div>
+    <div id="tilt-hint">📱 かたむけてね</div>
+  </div>
+
+  <div id="ui-row">
+    <div class="badge">⭐ レベル <span id="lv-num">1</span></div>
+    <div id="stars-row"></div>
+    <button id="btn-restart">もう一度</button>
+  </div>
+</div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────
+const LEVELS = [
+  // level 1: very simple
+  { cols: 7, rows: 9, complexity: 0.25 },
+  // level 2
+  { cols: 9, rows: 11, complexity: 0.35 },
+  // level 3
+  { cols: 11, rows: 13, complexity: 0.45 },
+  // level 4
+  { cols: 13, rows: 15, complexity: 0.55 },
+  // level 5
+  { cols: 15, rows: 17, complexity: 0.65 },
+];
+
+const COLORS = {
+  bg:     '#fffdf5',
+  wall:   '#ff6b6b',
+  wallTop:'#ff8e53',
+  path:   '#fffbe8',
+  ball:   '#ffe66d',
+  ballR:  '#f9c613',
+  goal:   '#6bcb77',
+  goalG:  '#4ea852',
+  start:  '#74b9ff',
+};
+
+const BALL_RADIUS_RATIO = 0.38; // fraction of cell size
+const PHYSICS_DT = 1/60;
+const MAX_SPEED = 8;
+const FRICTION = 0.88;
+const GRAVITY_SCALE = 35;
+
+// ─── State ────────────────────────────────────────────────
+let currentLevel = 0;
+let starsEarned = [false,false,false,false,false];
+let gameActive = false;
+let startTime = 0;
+let maze = null; // 2d array of cells
+
+let ballX, ballY, velX, velY;
+let tiltX = 0, tiltY = 0; // current gravity direction
+
+let canvasW, canvasH, cellSize;
+let mazeOffX, mazeOffY, mazePxW, mazePxH;
+
+const canvas = document.getElementById('maze');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const overlayEmoji = document.getElementById('overlay-emoji');
+const overlayTitle = document.getElementById('overlay-title');
+const overlayMsg = document.getElementById('overlay-msg');
+const lvNum = document.getElementById('lv-num');
+const starsRow = document.getElementById('stars-row');
+
+// ─── Maze Generation (Recursive Backtracker) ──────────────
+function generateMaze(cols, rows) {
+  // Each cell has walls: N, S, E, W
+  const cells = Array.from({length: rows}, () =>
+    Array.from({length: cols}, () => ({ n:true, s:true, e:true, w:true, visited:false }))
+  );
+
+  function carve(r, c) {
+    cells[r][c].visited = true;
+    const dirs = shuffle([[-1,0,'n','s'],[1,0,'s','n'],[0,1,'e','w'],[0,-1,'w','e']]);
+    for (const [dr,dc,w1,w2] of dirs) {
+      const nr = r+dr, nc = c+dc;
+      if (nr>=0&&nr<rows&&nc>=0&&nc<cols&&!cells[nr][nc].visited) {
+        cells[r][c][w1] = false;
+        cells[nr][nc][w2] = false;
+        carve(nr, nc);
+      }
+    }
+  }
+
+  carve(0, 0);
+  return cells;
+}
+
+function shuffle(arr) {
+  for (let i=arr.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// ─── Canvas Resize ────────────────────────────────────────
+function resizeCanvas() {
+  const wrap = document.getElementById('canvas-wrap');
+  const appH = document.getElementById('app').clientHeight;
+  const appW = document.getElementById('app').clientWidth;
+  const uiH = document.getElementById('ui-row').offsetHeight;
+  const titleH = document.getElementById('title').offsetHeight;
+
+  const maxW = Math.min(appW - 20, 480);
+  const maxH = appH - titleH - uiH - 60;
+
+  const cfg = LEVELS[currentLevel];
+  const aspect = cfg.cols / cfg.rows;
+  let w = Math.min(maxW, maxH * aspect);
+  let h = w / aspect;
+  if (h > maxH) { h = maxH; w = h * aspect; }
+
+  canvas.width = Math.floor(w);
+  canvas.height = Math.floor(h);
+  wrap.style.width = canvas.width + 'px';
+  wrap.style.height = canvas.height + 'px';
+
+  canvasW = canvas.width;
+  canvasH = canvas.height;
+
+  const cfg2 = LEVELS[currentLevel];
+  cellSize = Math.min(canvasW / cfg2.cols, canvasH / cfg2.rows);
+  mazePxW = cellSize * cfg2.cols;
+  mazePxH = cellSize * cfg2.rows;
+  mazeOffX = (canvasW - mazePxW) / 2;
+  mazeOffY = (canvasH - mazePxH) / 2;
+}
+
+// ─── Init Level ───────────────────────────────────────────
+function initLevel(lvIdx) {
+  currentLevel = Math.min(lvIdx, LEVELS.length-1);
+  resizeCanvas();
+
+  const cfg = LEVELS[currentLevel];
+  maze = generateMaze(cfg.cols, cfg.rows);
+
+  // ball starts top-left cell center
+  const br = cellSize * BALL_RADIUS_RATIO;
+  ballX = mazeOffX + cellSize * 0.5;
+  ballY = mazeOffY + cellSize * 0.5;
+  velX = 0; velY = 0;
+
+  lvNum.textContent = currentLevel + 1;
+  updateStarsUI();
+  gameActive = false;
+
+  // Show start overlay on first load only
+  if (lvIdx === 0) {
+    showOverlay('🎮', 'はじめよう！', 'スマホをかたむけて<br>ボールをゴールまでころがそう！', true);
+  } else {
+    showOverlay('⭐', `レベル ${currentLevel+1}`, 'つぎのめいろだ！<br>がんばれ～！', true);
+  }
+
+  render();
+}
+
+// ─── Overlay ──────────────────────────────────────────────
+function showOverlay(emoji, title, msg, showStartBtn) {
+  overlayEmoji.textContent = emoji;
+  overlayTitle.textContent = title;
+  overlayMsg.innerHTML = msg;
+  const btn = document.getElementById('btn-start');
+  btn.style.display = showStartBtn ? '' : 'none';
+  overlay.classList.remove('hidden');
+}
+
+function hideOverlay() {
+  overlay.classList.add('hidden');
+  gameActive = true;
+  startTime = performance.now();
+}
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  hideOverlay();
+});
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+  initLevel(currentLevel);
+});
+
+// ─── Physics ──────────────────────────────────────────────
+function updatePhysics(dt) {
+  if (!gameActive) return;
+
+  velX += tiltX * GRAVITY_SCALE * dt;
+  velY += tiltY * GRAVITY_SCALE * dt;
+
+  velX *= FRICTION;
+  velY *= FRICTION;
+
+  // clamp speed
+  const spd = Math.hypot(velX, velY);
+  if (spd > MAX_SPEED) { velX *= MAX_SPEED/spd; velY *= MAX_SPEED/spd; }
+
+  // integrate
+  let nx = ballX + velX;
+  let ny = ballY + velY;
+
+  const br = cellSize * BALL_RADIUS_RATIO;
+
+  // wall collision
+  const cfg = LEVELS[currentLevel];
+  // figure out which cell ball is in
+  const col = Math.floor((ballX - mazeOffX) / cellSize);
+  const row = Math.floor((ballY - mazeOffY) / cellSize);
+
+  // Check walls of current + neighbors
+  for (let r = Math.max(0, row-1); r <= Math.min(cfg.rows-1, row+1); r++) {
+    for (let c = Math.max(0, col-1); c <= Math.min(cfg.cols-1, col+1); c++) {
+      const cell = maze[r][c];
+      const cx = mazeOffX + c * cellSize;
+      const cy = mazeOffY + r * cellSize;
+      const wallThick = Math.max(2, cellSize * 0.1);
+
+      // North wall
+      if (cell.n) {
+        // rect: cx to cx+cellSize, cy to cy+wallThick
+        resolveWall(nx, ny, br, cx, cy, cx+cellSize, cy+wallThick);
+        [nx, ny] = [resolveX, resolveY];
+      }
+      // South wall
+      if (cell.s) {
+        resolveWall(nx, ny, br, cx, cy+cellSize-wallThick, cx+cellSize, cy+cellSize);
+        [nx, ny] = [resolveX, resolveY];
+      }
+      // West wall
+      if (cell.w) {
+        resolveWall(nx, ny, br, cx, cy, cx+wallThick, cy+cellSize);
+        [nx, ny] = [resolveX, resolveY];
+      }
+      // East wall
+      if (cell.e) {
+        resolveWall(nx, ny, br, cx+cellSize-wallThick, cy, cx+cellSize, cy+cellSize);
+        [nx, ny] = [resolveX, resolveY];
+      }
+    }
+  }
+
+  // outer boundary
+  if (nx - br < mazeOffX) { nx = mazeOffX + br; velX *= -0.3; }
+  if (nx + br > mazeOffX + mazePxW) { nx = mazeOffX + mazePxW - br; velX *= -0.3; }
+  if (ny - br < mazeOffY) { ny = mazeOffY + br; velY *= -0.3; }
+  if (ny + br > mazeOffY + mazePxH) { ny = mazeOffY + mazePxH - br; velY *= -0.3; }
+
+  ballX = nx;
+  ballY = ny;
+
+  // Check goal
+  const gcol = cfg.cols - 1;
+  const grow = cfg.rows - 1;
+  const goalCX = mazeOffX + gcol * cellSize + cellSize * 0.5;
+  const goalCY = mazeOffY + grow * cellSize + cellSize * 0.5;
+  if (Math.hypot(ballX - goalCX, ballY - goalCY) < cellSize * 0.45) {
+    onGoalReached();
+  }
+}
+
+let resolveX = 0, resolveY = 0;
+function resolveWall(bx, by, br, wx1, wy1, wx2, wy2) {
+  resolveX = bx; resolveY = by;
+  const nearX = Math.max(wx1, Math.min(wx2, bx));
+  const nearY = Math.max(wy1, Math.min(wy2, by));
+  const dx = bx - nearX, dy = by - nearY;
+  const dist = Math.hypot(dx, dy);
+  if (dist < br && dist > 0) {
+    const pen = br - dist;
+    const nx = dx/dist, ny = dy/dist;
+    resolveX = bx + nx * pen;
+    resolveY = by + ny * pen;
+    // bounce velocity (handled outside)
+    velX += nx * pen * 0.5;
+    velY += ny * pen * 0.5;
+  } else if (dist === 0) {
+    resolveY = by - br;
+  }
+}
+
+// ─── Goal ─────────────────────────────────────────────────
+function onGoalReached() {
+  gameActive = false;
+  starsEarned[currentLevel] = true;
+  updateStarsUI();
+  spawnStars();
+
+  if (currentLevel >= LEVELS.length - 1) {
+    showOverlay('🏆', 'ぜんぶクリア！', 'すごい！かんぺきだよ！<br>めいろはかせだ～！', false);
+    setTimeout(() => {
+      showOverlay('🏆', 'ぜんぶクリア！', 'すごい！かんぺきだよ！<br>めいろはかせだ～！', true);
+      document.getElementById('btn-start').textContent = 'もういちど！';
+      document.getElementById('btn-start').onclick = () => { starsEarned=[false,false,false,false,false]; initLevel(0); document.getElementById('btn-start').textContent='スタート！'; document.getElementById('btn-start').onclick=()=>hideOverlay(); };
+    }, 200);
+  } else {
+    showOverlay('🎉', 'クリア！', `つぎはレベル${currentLevel+2}！<br>もっとむずかしいよ～！`, false);
+    setTimeout(() => {
+      initLevel(currentLevel + 1);
+    }, 2200);
+  }
+}
+
+function spawnStars() {
+  for (let i=0; i<16; i++) {
+    const el = document.createElement('div');
+    el.className = 'star';
+    el.textContent = ['⭐','🌟','✨','🎉','🎊'][Math.floor(Math.random()*5)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 80 + Math.random() * 120;
+    el.style.setProperty('--tx', Math.cos(angle)*dist + 'px');
+    el.style.setProperty('--ty', Math.sin(angle)*dist + 'px');
+    el.style.left = (ballX + document.getElementById('canvas-wrap').getBoundingClientRect().left) + 'px';
+    el.style.top  = (ballY + document.getElementById('canvas-wrap').getBoundingClientRect().top) + 'px';
+    el.style.animationDelay = (Math.random()*0.4) + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+  }
+}
+
+function updateStarsUI() {
+  starsRow.innerHTML = '';
+  for (let i=0; i<LEVELS.length; i++) {
+    const s = document.createElement('span');
+    s.textContent = starsEarned[i] ? '⭐' : '☆';
+    s.style.filter = starsEarned[i] ? 'drop-shadow(0 0 4px gold)' : 'none';
+    starsRow.appendChild(s);
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  // background
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  // soft grid bg
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.strokeStyle = '#ffb347';
+  ctx.lineWidth = 1;
+  for (let x=0; x<canvasW; x+=20) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvasH); ctx.stroke(); }
+  for (let y=0; y<canvasH; y+=20) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvasW,y); ctx.stroke(); }
+  ctx.restore();
+
+  const cfg = LEVELS[currentLevel];
+  const wt = Math.max(2, cellSize * 0.1);
+
+  // draw floor (path cells)
+  for (let r=0; r<cfg.rows; r++) {
+    for (let c=0; c<cfg.cols; c++) {
+      const cx = mazeOffX + c*cellSize;
+      const cy = mazeOffY + r*cellSize;
+      ctx.fillStyle = COLORS.path;
+      ctx.fillRect(cx+wt/2, cy+wt/2, cellSize-wt, cellSize-wt);
+    }
+  }
+
+  // start cell
+  ctx.fillStyle = COLORS.start;
+  ctx.globalAlpha = 0.25;
+  ctx.fillRect(mazeOffX+wt/2, mazeOffY+wt/2, cellSize-wt, cellSize-wt);
+  ctx.globalAlpha = 1;
+
+  // goal cell
+  const gcol = cfg.cols-1, grow = cfg.rows-1;
+  const gx = mazeOffX + gcol*cellSize;
+  const gy = mazeOffY + grow*cellSize;
+  ctx.fillStyle = COLORS.goal;
+  ctx.globalAlpha = 0.35;
+  ctx.fillRect(gx+wt/2, gy+wt/2, cellSize-wt, cellSize-wt);
+  ctx.globalAlpha = 1;
+
+  // goal flag
+  const gCX = gx + cellSize*0.5, gCY = gy + cellSize*0.5;
+  ctx.font = `${cellSize*0.55}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🏁', gCX, gCY);
+
+  // draw walls
+  const wallRound = wt * 0.5;
+  for (let r=0; r<cfg.rows; r++) {
+    for (let c=0; c<cfg.cols; c++) {
+      const cell = maze[r][c];
+      const cx = mazeOffX + c*cellSize;
+      const cy = mazeOffY + r*cellSize;
+
+      ctx.fillStyle = COLORS.wall;
+      if (cell.n) fillRoundRect(ctx, cx, cy, cellSize, wt, wallRound);
+      if (cell.s) fillRoundRect(ctx, cx, cy+cellSize-wt, cellSize, wt, wallRound);
+      if (cell.w) fillRoundRect(ctx, cx, cy, wt, cellSize, wallRound);
+      if (cell.e) fillRoundRect(ctx, cx+cellSize-wt, cy, wt, cellSize, wallRound);
+    }
+  }
+
+  // ball shadow
+  const br = cellSize * BALL_RADIUS_RATIO;
+  ctx.save();
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#a0522d';
+  ctx.beginPath();
+  ctx.ellipse(ballX+2, ballY+4, br, br*0.5, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // ball gradient
+  const grad = ctx.createRadialGradient(ballX-br*0.3, ballY-br*0.3, br*0.05, ballX, ballY, br);
+  grad.addColorStop(0, '#fffde0');
+  grad.addColorStop(0.4, COLORS.ball);
+  grad.addColorStop(1, COLORS.ballR);
+  ctx.beginPath();
+  ctx.arc(ballX, ballY, br, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // ball shine
+  ctx.beginPath();
+  ctx.arc(ballX - br*0.3, ballY - br*0.3, br*0.22, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fill();
+
+  // emoji on ball
+  ctx.font = `${br*1.0}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('😊', ballX, ballY + br*0.05);
+}
+
+function fillRoundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ─── Gyroscope / Mouse / Touch ────────────────────────────
+let gyroAvailable = false;
+
+function requestGyro() {
+  if (typeof DeviceOrientationEvent !== 'undefined') {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(p => {
+        if (p === 'granted') startGyro();
+      }).catch(() => {});
+    } else {
+      startGyro();
+    }
+  }
+}
+
+function startGyro() {
+  window.addEventListener('deviceorientation', (e) => {
+    if (e.gamma !== null) {
+      gyroAvailable = true;
+      // gamma: left-right tilt (-90..90), beta: front-back tilt (-180..180)
+      const maxTilt = 30;
+      tiltX = Math.max(-1, Math.min(1, e.gamma / maxTilt));
+      tiltY = Math.max(-1, Math.min(1, (e.beta - 45) / maxTilt));
+    }
+  });
+}
+
+// Mouse fallback (desktop)
+canvas.addEventListener('mousemove', (e) => {
+  if (gyroAvailable) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / canvasW - 0.5;
+  const my = (e.clientY - rect.top)  / canvasH - 0.5;
+  tiltX = mx * 2;
+  tiltY = my * 2;
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (!gyroAvailable) { tiltX=0; tiltY=0; }
+});
+
+// Touch: drag canvas
+let touchStartX=0, touchStartY=0;
+canvas.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  touchStartX = t.clientX; touchStartY = t.clientY;
+}, {passive:true});
+
+canvas.addEventListener('touchmove', e => {
+  if (gyroAvailable) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  const dx = (t.clientX - touchStartX) / 60;
+  const dy = (t.clientY - touchStartY) / 60;
+  tiltX = Math.max(-1, Math.min(1, dx));
+  tiltY = Math.max(-1, Math.min(1, dy));
+}, {passive:false});
+
+canvas.addEventListener('touchend', () => {
+  if (!gyroAvailable) { tiltX=0; tiltY=0; }
+});
+
+// ─── Game Loop ────────────────────────────────────────────
+let lastTime = 0;
+function loop(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  updatePhysics(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+// ─── Boot ─────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initLevel(0);
+  requestGyro();
+  requestAnimationFrame(loop);
+});
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  const cfg = LEVELS[currentLevel];
+  const br = cellSize * BALL_RADIUS_RATIO;
+  // clamp ball to maze bounds
+  ballX = Math.max(mazeOffX+br, Math.min(mazeOffX+mazePxW-br, ballX));
+  ballY = Math.max(mazeOffY+br, Math.min(mazeOffY+mazePxH-br, ballY));
+});
+</script>
+</body>
+</html>
