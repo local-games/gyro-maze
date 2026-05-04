@@ -1,0 +1,5 @@
+{
+  "name": "マイ自作ゲーム",
+  "display": "standalone",
+  "start_url": "index.html"
+}
