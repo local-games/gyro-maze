@@ -736,5 +736,10 @@ window.addEventListener('resize', () => {
   ballY = Math.max(mazeOffY+br, Math.min(mazeOffY+mazePxH-br, ballY));
 });
 </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
 </body>
 </html>
