@@ -742,17 +742,15 @@ window.addEventListener('resize', () => {
   }
 </script>
 <script>
-  // 起動した瞬間に、履歴を10回分くらい自分自身で埋める
-  for (let i = 0; i < 10; i++) {
+history.pushState(null, null, location.href);
+window.addEventListener('popstate', (e) => {
+  // 戻るボタンが押されたら、確認ダイアログを出すか、リスタートさせる
+  if (confirm("ゲームをやり直しますか？")) {
+    location.reload(); 
+  } else {
     history.pushState(null, null, location.href);
   }
-
-  window.addEventListener('popstate', () => {
-    // 戻るボタンが押されたら、強制的に今のゲーム画面を再描画（またはリスタート）
-    // スプラッシュ画面まで遡るには10回連続で連打しないといけなくなるので
-    // 実質的に「固まる」のを防げます
-    location.hash = "play"; 
-  });
+});
 </script>
 </body>
 </html>
