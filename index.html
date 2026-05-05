@@ -741,5 +741,14 @@ window.addEventListener('resize', () => {
     navigator.serviceWorker.register('sw.js');
   }
 </script>
+<script>
+// ブラウザの「履歴」を偽造して、戻るボタンが押されてもその場に留まるようにする
+history.pushState(null, null, location.href);
+window.addEventListener('popstate', (e) => {
+  history.pushState(null, null, location.href);
+  // ここに「本当にもう一度戻るを押したらアプリを閉じる」といった処理は
+  // PWAでは難しいため、基本は「何もしない（画面を維持する）」設定にします。
+});
+</script>
 </body>
 </html>
