@@ -185,6 +185,14 @@
 </style>
 </head>
 <body>
+<div id="fallback-screen" style="display:none; position:fixed; inset:0; z-index:9999; background:#fff9e6; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-family:sans-serif;">
+  <img src="icon.png" style="width:120px; border-radius:20%; margin-bottom:20px; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
+  <h2 style="color:#ff6b6b;">迷路から出ちゃった！</h2>
+  <p style="color:#888; margin-bottom:30px;">下のボタンを押してゲームに戻ろう</p>
+  <button onclick="location.reload()" style="background:#6bcb77; color:#fff; border:none; border-radius:50px; padding:15px 40px; font-size:1.2rem; font-weight:bold; cursor:pointer; box-shadow:0 5px 0 #2d7a35;">
+    ゲームに戻る
+  </button>
+</div>
 <div id="app">
   <div id="title">🎪 ころころめいろ 🎪</div>
 
@@ -742,15 +750,18 @@ window.addEventListener('resize', () => {
   }
 </script>
 <script>
-history.pushState(null, null, location.href);
-window.addEventListener('popstate', (e) => {
-  // 戻るボタンが押されたら、確認ダイアログを出すか、リスタートさせる
-  if (confirm("ゲームをやり直しますか？")) {
-    location.reload(); 
-  } else {
-    history.pushState(null, null, location.href);
-  }
-});
+  // 1. 起動した瞬間に「ダミーの履歴」を1つ作る
+  history.pushState({page: "dummy"}, null, "");
+
+  // 2. 戻るボタンが押された時の処理
+  window.addEventListener('popstate', function(event) {
+    // 予備の画面を表示させる
+    const fallback = document.getElementById('fallback-screen');
+    fallback.style.display = 'flex';
+    
+    // さらに、もし可能ならもう一度「進む」を試みる
+    history.pushState({page: "dummy"}, null, "");
+  });
 </script>
 </body>
 </html>
