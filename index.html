@@ -742,13 +742,15 @@ window.addEventListener('resize', () => {
   }
 </script>
 <script>
-// ブラウザの「履歴」を偽造して、戻るボタンが押されてもその場に留まるようにする
-history.pushState(null, null, location.href);
-window.addEventListener('popstate', (e) => {
-  history.pushState(null, null, location.href);
-  // ここに「本当にもう一度戻るを押したらアプリを閉じる」といった処理は
-  // PWAでは難しいため、基本は「何もしない（画面を維持する）」設定にします。
-});
+  // ページが読み込まれた瞬間に履歴を1つ追加する
+  (function() {
+    history.pushState(null, null, location.href);
+
+    // 戻るボタンが押された瞬間、即座に「進む」を実行して押し戻す
+    window.addEventListener('popstate', function() {
+      history.go(1);
+    });
+  })();
 </script>
 </body>
 </html>
