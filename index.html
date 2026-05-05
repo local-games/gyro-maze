@@ -750,17 +750,17 @@ window.addEventListener('resize', () => {
   }
 </script>
 <script>
-  // 1. 起動した瞬間に「ダミーの履歴」を1つ作る
-  history.pushState({page: "dummy"}, null, "");
+  // 履歴を積んでおく
+  history.pushState({page: "play"}, null, "");
 
-  // 2. 戻るボタンが押された時の処理
   window.addEventListener('popstate', function(event) {
-    // 予備の画面を表示させる
+    // 予備画面をパッと出す
     const fallback = document.getElementById('fallback-screen');
-    fallback.style.display = 'flex';
-    
-    // さらに、もし可能ならもう一度「進む」を試みる
-    history.pushState({page: "dummy"}, null, "");
+    if(fallback) {
+        fallback.style.display = 'flex';
+    }
+    // 次に備えてまた履歴を積む
+    history.pushState({page: "play"}, null, "");
   });
 </script>
 </body>
