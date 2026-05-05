@@ -1,7 +1,8 @@
 {
   "name": "ころころめいろ",
   "short_name": "めいろ",
-  "start_url": "/gyro-maze/index.html",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#fff9e6",
   "theme_color": "#ff6b6b",
