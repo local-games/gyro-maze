@@ -742,15 +742,15 @@ window.addEventListener('resize', () => {
   }
 </script>
 <script>
-  // ページが読み込まれた瞬間に履歴を1つ追加する
-  (function() {
-    history.pushState(null, null, location.href);
+  // ページ読み込み時に履歴を固定
+  history.pushState(null, null, null);
 
-    // 戻るボタンが押された瞬間、即座に「進む」を実行して押し戻す
-    window.addEventListener('popstate', function() {
-      history.go(1);
-    });
-  })();
+  window.addEventListener('popstate', function(e) {
+    // 戻ろうとした瞬間に、強制的に「進む」を実行
+    history.pushState(null, null, null);
+    // ユーザーに「戻るボタンは使えないよ」と視覚的に伝えるならここでアラート（任意）
+    // alert("戻るボタンではなく、画面内のボタンを使ってね！");
+  });
 </script>
 </body>
 </html>
