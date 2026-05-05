@@ -1,3 +1,7 @@
-self.addEventListener('fetch', function(event) {
-  // 何もしないが、これがあるだけで「オフライン対応」とみなされる
+self.addEventListener('install', (event) => {
+  console.log('Service Worker installed.');
+});
+
+self.addEventListener('fetch', (event) => {
+  // インストール条件を満たすための空のフェッチイベント
 });
