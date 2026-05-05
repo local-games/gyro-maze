@@ -189,13 +189,13 @@
   <img src="icon.png" style="width:120px; border-radius:20%; margin-bottom:20px; box-shadow:0 10px 20px rgba(0,0,0,0.1);">
   <h2 style="color:#ff6b6b;">迷路から出ちゃった！</h2>
   <p style="color:#888; margin-bottom:30px;">下のボタンを押してゲームに戻ろう</p>
-  <button onclick="location.reload()" style="background:#6bcb77; color:#fff; border:none; border-radius:50px; padding:15px 40px; font-size:1.2rem; font-weight:bold; cursor:pointer; box-shadow:0 5px 0 #2d7a35;">
-    ゲームに戻る
-  </button>
+  <button onclick="document.getElementById('fallback-screen').style.display='none'; initLevel(0);" 
+        style="background:#6bcb77; color:#fff; border:none; border-radius:50px; padding:15px 40px; font-size:1.2rem; font-weight:bold; cursor:pointer; box-shadow:0 5px 0 #2d7a35;">
+  ゲームに戻る
+</button>
 </div>
 <div id="app">
   <div id="title">🎪 ころころめいろ 🎪</div>
-
   <div id="canvas-wrap">
     <canvas id="maze"></canvas>
     <div id="overlay">
